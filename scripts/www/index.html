@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>敲木鱼 - 功德积累</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="敲木鱼">
+    <meta name="theme-color" content="#1a0a00">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a0a00 0%, #2d1810 30%, #1a0a00 60%, #0d0d0d 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 背景粒子 - 香火 */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, rgba(255, 180, 100, 0.6), transparent);
+            border-radius: 50%;
+            animation: floatUp linear infinite;
+            opacity: 0;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+            }
+            90% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateY(-10vh) scale(1);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+        }
+
+        /* 标题 */
+        .title {
+            color: #d4a574;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(212, 165, 116, 0.3);
+            letter-spacing: 8px;
+            margin-bottom: 5px;
+        }
+
+        .title span {
+            display: inline-block;
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 10px rgba(212, 165, 116, 0.3); }
+            50% { text-shadow: 0 0 30px rgba(212, 165, 116, 0.6), 0 0 60px rgba(212, 165, 116, 0.2); }
+        }
+
+        /* 功德计数 */
+        .score-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(212, 165, 116, 0.2);
+            border-radius: 50px;
+            padding: 8px 28px;
+            backdrop-filter: blur(10px);
+        }
+
+        .score-label {
+            color: #a08060;
+            font-size: 16px;
+            letter-spacing: 2px;
+        }
+
+        .score {
+            color: #ffd700;
+            font-size: 36px;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+            font-family: 'Georgia', serif;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            transition: transform 0.1s;
+        }
+
+        .score.pop {
+            animation: scorePop 0.3s ease-out;
+        }
+
+        @keyframes scorePop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); color: #fff; }
+            100% { transform: scale(1); }
+        }
+
+        /* 木鱼场景 */
+        .scene {
+            position: relative;
+            width: 340px;
+            height: 340px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 木鱼区域 */
+        .muyu-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            z-index: 2;
+        }
+
+        .muyu-wrapper:active .muyu {
+            transform: scale(0.92);
+        }
+
+        .muyu {
+            width: 260px;
+            height: 260px;
+            position: relative;
+            transition: transform 0.08s ease;
+            filter: drop-shadow(0 0 30px rgba(212, 165, 116, 0.15));
+        }
+
+        /* 木鱼SVG */
+        .muyu svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 敲击动画 - 震动 */
+        .muyu.hit {
+            animation: hitShake 0.15s ease-out;
+        }
+
+        @keyframes hitShake {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-3deg) scale(0.95); }
+            50% { transform: rotate(2deg) scale(0.97); }
+            75% { transform: rotate(-1deg) scale(0.99); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+
+        /* ===== 木鱼槌 ===== */
+        .mallet {
+            position: absolute;
+            width: 100px;
+            height: 200px;
+            z-index: 3;
+            pointer-events: none;
+            transform-origin: bottom center;
+            transition: transform 0.08s ease;
+            right: -30px;
+            top: -60px;
+        }
+
+        .mallet svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 木鱼槌敲击动画 */
+        .mallet.hit {
+            animation: malletHit 0.15s ease-out;
+        }
+
+        @keyframes malletHit {
+            0% {
+                transform: rotate(0deg) translate(0, 0);
+            }
+            30% {
+                transform: rotate(-25deg) translate(10px, 15px);
+            }
+            60% {
+                transform: rotate(-15deg) translate(5px, 8px);
+            }
+            100% {
+                transform: rotate(0deg) translate(0, 0);
+            }
+        }
+
+        /* 自动敲击时木鱼槌循环动画 */
+        .mallet.auto {
+            animation: malletAuto 0.6s ease-in-out infinite;
+        }
+
+        @keyframes malletAuto {
+            0% {
+                transform: rotate(0deg) translate(0, 0);
+            }
+            15% {
+                transform: rotate(-28deg) translate(12px, 18px);
+            }
+            30% {
+                transform: rotate(-15deg) translate(5px, 8px);
+            }
+            45% {
+                transform: rotate(0deg) translate(0, 0);
+            }
+            100% {
+                transform: rotate(0deg) translate(0, 0);
+            }
+        }
+
+        /* 敲击波纹 */
+        .ripple-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .ripple {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(212, 165, 116, 0.5);
+            animation: rippleExpand 0.6s ease-out forwards;
+        }
+
+        @keyframes rippleExpand {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.8;
+            }
+            100% {
+                width: 300px;
+                height: 300px;
+                opacity: 0;
+            }
+        }
+
+        /* 飘出的 "+1 功德" */
+        .float-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffd700;
+            font-size: 28px;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: floatUpText 1s ease-out forwards;
+            z-index: 10;
+        }
+
+        @keyframes floatUpText {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            30% {
+                opacity: 1;
+                transform: translate(-50%, -80%) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -200%) scale(1);
+            }
+        }
+
+        /* 连击显示 */
+        .combo-container {
+            position: absolute;
+            top: -70px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .combo-text {
+            color: #ff6b35;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+            animation: comboAppear 0.5s ease-out forwards;
+        }
+
+        @keyframes comboAppear {
+            0% {
+                opacity: 0;
+                transform: scale(0.3) translateY(20px);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2) translateY(-10px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        /* ===== 🎆 炫酷特效 CSS ===== */
+
+        /* 1. 屏幕震动 */
+        .effect-screen-shake {
+            animation: screenShake 0.4s ease-out;
+        }
+        @keyframes screenShake {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-8px, 5px); }
+            20% { transform: translate(6px, -4px); }
+            30% { transform: translate(-5px, 7px); }
+            40% { transform: translate(4px, -3px); }
+            50% { transform: translate(-3px, 4px); }
+            60% { transform: translate(2px, -2px); }
+            70% { transform: translate(-1px, 1px); }
+        }
+
+        /* 2. 金光爆闪 */
+        .effect-golden-burst {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            background: radial-gradient(circle at center, rgba(255, 215, 0, 0.6), rgba(255, 215, 0, 0.2) 40%, transparent 70%);
+            animation: goldenBurst 0.6s ease-out forwards;
+        }
+        @keyframes goldenBurst {
+            0% { opacity: 0; transform: scale(0.3); }
+            20% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(2); }
+        }
+
+        /* 3. 粒子爆炸 */
+        .effect-particle-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 998;
+        }
+        .effect-particle {
+            position: absolute;
+            border-radius: 50%;
+            animation: particleExplode 1s ease-out forwards;
+        }
+        @keyframes particleExplode {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+        }
+
+        /* 4. 佛光普照 */
+        .effect-buddha-light {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 200, 100, 0.8), rgba(255, 180, 50, 0.4) 30%, rgba(255, 150, 0, 0.1) 60%, transparent 80%);
+            pointer-events: none;
+            z-index: 997;
+            animation: buddhaLight 1.2s ease-out forwards;
+        }
+        @keyframes buddhaLight {
+            0% { width: 0; height: 0; opacity: 0; }
+            30% { opacity: 1; }
+            60% { width: 800px; height: 800px; opacity: 0.8; }
+            100% { width: 1200px; height: 1200px; opacity: 0; }
+        }
+
+        /* 5. 烟花特效 */
+        .effect-firework {
+            position: fixed;
+            pointer-events: none;
+            z-index: 996;
+        }
+        .effect-firework-particle {
+            position: absolute;
+            border-radius: 50%;
+            animation: fireworkBurst 1s ease-out forwards;
+        }
+        @keyframes fireworkBurst {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(0.3); }
+        }
+
+        /* 6. 彩虹光环 */
+        .effect-rainbow-ring {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 6px solid transparent;
+            pointer-events: none;
+            z-index: 995;
+            animation: rainbowRing 1s ease-out forwards;
+        }
+        @keyframes rainbowRing {
+            0% { width: 0; height: 0; border-width: 8px; border-color: #ff0000; opacity: 1; }
+            16% { border-color: #ff8800; }
+            33% { border-color: #ffff00; }
+            50% { border-color: #00ff00; }
+            66% { border-color: #0088ff; }
+            83% { border-color: #8800ff; }
+            100% { width: 500px; height: 500px; border-width: 2px; border-color: #ff0000; opacity: 0; }
+        }
+
+        /* 7. 经文飘落 */
+        .effect-sutra-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 994;
+        }
+        .effect-sutra-char {
+            position: absolute;
+            color: #ffd700;
+            font-size: 24px;
+            font-weight: bold;
+            opacity: 0;
+            animation: sutraFall 2s ease-in forwards;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+        }
+        @keyframes sutraFall {
+            0% { opacity: 0; transform: translateY(-20px) rotate(0deg) scale(0.5); }
+            20% { opacity: 1; transform: translateY(20px) rotate(10deg) scale(1.2); }
+            100% { opacity: 0; transform: translateY(200px) rotate(30deg) scale(0.8); }
+        }
+
+        /* 8. 莲花绽放 */
+        .effect-lotus {
+            position: fixed;
+            pointer-events: none;
+            z-index: 993;
+            font-size: 60px;
+            animation: lotusBloom 1.5s ease-out forwards;
+            text-shadow: 0 0 30px rgba(255, 200, 200, 0.6);
+        }
+        @keyframes lotusBloom {
+            0% { opacity: 0; transform: scale(0) rotate(-30deg); }
+            40% { opacity: 1; transform: scale(1.3) rotate(10deg); }
+            70% { transform: scale(0.9) rotate(-5deg); }
+            100% { opacity: 0.8; transform: scale(1) rotate(0deg); }
+        }
+
+        /* 9. 雷电特效 */
+        .effect-thunder {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 992;
+            background: white;
+            animation: thunderFlash 0.3s ease-out forwards;
+        }
+        @keyframes thunderFlash {
+            0% { opacity: 0.9; }
+            10% { opacity: 0.3; }
+            20% { opacity: 0.8; }
+            30% { opacity: 0.2; }
+            50% { opacity: 0.5; }
+            100% { opacity: 0; }
+        }
+
+        /* 10. 星星旋转 */
+        .effect-stars-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 991;
+        }
+        .effect-star {
+            position: absolute;
+            color: #ffd700;
+            font-size: 30px;
+            animation: starSpin 1.2s ease-out forwards;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+        @keyframes starSpin {
+            0% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
+            30% { opacity: 1; transform: translate(var(--sx), var(--sy)) scale(1.2) rotate(180deg); }
+            100% { opacity: 0; transform: translate(var(--sx2), var(--sy2)) scale(0.3) rotate(360deg); }
+        }
+
+        /* 11. 水墨扩散 */
+        .effect-ink {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.1) 40%, transparent 70%);
+            pointer-events: none;
+            z-index: 990;
+            animation: inkSpread 1s ease-out forwards;
+        }
+        @keyframes inkSpread {
+            0% { width: 0; height: 0; opacity: 0; }
+            30% { opacity: 0.6; }
+            100% { width: 600px; height: 600px; opacity: 0; }
+        }
+
+        /* 12. 彩色纸屑 */
+        .effect-confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 989;
+        }
+        .effect-confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confettiFall 1.5s ease-in forwards;
+        }
+        @keyframes confettiFall {
+            0% { opacity: 1; transform: translateY(-20px) rotate(0deg) scale(1); }
+            100% { opacity: 0; transform: translateY(calc(100vh + 50px)) rotate(720deg) scale(0.5); }
+        }
+
+        /* 13. 光环脉冲 */
+        .effect-halo-pulse {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 3px solid rgba(255, 215, 0, 0.6);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.3), inset 0 0 40px rgba(255, 215, 0, 0.1);
+            pointer-events: none;
+            z-index: 988;
+            animation: haloPulse 0.8s ease-out forwards;
+        }
+        @keyframes haloPulse {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 700px; height: 700px; opacity: 0; }
+        }
+
+        /* 14. 数字雨 */
+        .effect-digital-rain-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 987;
+        }
+        .effect-digital-char {
+            position: absolute;
+            color: #00ff88;
+            font-size: 18px;
+            font-family: monospace;
+            opacity: 0;
+            animation: digitalRain 1.2s ease-in forwards;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        @keyframes digitalRain {
+            0% { opacity: 0; transform: translateY(-30px); }
+            30% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(200px); }
+        }
+
+        /* 15. 爱心飘浮 */
+        .effect-hearts-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 986;
+        }
+        .effect-heart {
+            position: absolute;
+            font-size: 30px;
+            animation: heartFloat 1.5s ease-out forwards;
+        }
+        @keyframes heartFloat {
+            0% { opacity: 0; transform: translateY(0) scale(0) rotate(0deg); }
+            30% { opacity: 1; transform: translateY(-30px) scale(1.2) rotate(15deg); }
+            100% { opacity: 0; transform: translateY(-150px) scale(0.5) rotate(-15deg); }
+        }
+
+        /* 控制栏 */
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            background: rgba(212, 165, 116, 0.1);
+            border: 1px solid rgba(212, 165, 116, 0.2);
+            color: #a08060;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            letter-spacing: 2px;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: rgba(212, 165, 116, 0.2);
+            border-color: rgba(212, 165, 116, 0.4);
+            color: #d4a574;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn.active {
+            background: rgba(255, 107, 53, 0.2);
+            border-color: rgba(255, 107, 53, 0.4);
+            color: #ff6b35;
+        }
+
+        /* 法律链接按钮 */
+        .legal-links {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .legal-links .btn {
+            font-size: 12px;
+            padding: 5px 14px;
+            letter-spacing: 1px;
+        }
+
+        /* 语言切换按钮 */
+        .lang-btn {
+            background: rgba(100, 180, 255, 0.1);
+            border: 1px solid rgba(100, 180, 255, 0.2);
+            color: #80b0d0;
+            padding: 6px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+            letter-spacing: 1px;
+            font-family: inherit;
+            font-weight: bold;
+        }
+
+        .lang-btn:hover {
+            background: rgba(100, 180, 255, 0.2);
+            border-color: rgba(100, 180, 255, 0.4);
+            color: #a0d0f0;
+        }
+
+        .lang-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 底部信息 */
+        .info {
+            color: #6b5040;
+            font-size: 13px;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .scene {
+                width: 280px;
+                height: 280px;
+            }
+            .muyu {
+                width: 210px;
+                height: 210px;
+            }
+            .mallet {
+                width: 80px;
+                height: 160px;
+                right: -20px;
+                top: -40px;
+            }
+            .title {
+                font-size: 22px;
+            }
+            .score {
+                font-size: 28px;
+                min-width: 60px;
+            }
+            .score-container {
+                padding: 6px 18px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .scene {
+                width: 240px;
+                height: 240px;
+            }
+            .muyu {
+                width: 180px;
+                height: 180px;
+            }
+            .mallet {
+                width: 65px;
+                height: 130px;
+                right: -15px;
+                top: -30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 背景粒子 -->
+    <div class="particles" id="particles"></div>
+
+    <div class="container">
+        <div class="title">
+            <span>敲</span>
+            <span>木</span>
+            <span>鱼</span>
+        </div>
+
+        <div class="score-container">
+            <span class="score-label">功德</span>
+            <span class="score" id="score">0</span>
+        </div>
+
+        <div class="scene">
+            <!-- 木鱼槌 -->
+            <div class="mallet" id="mallet">
+                <svg viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="handleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#5a3a1a"/>
+                            <stop offset="30%" stop-color="#8b6914"/>
+                            <stop offset="50%" stop-color="#a07830"/>
+                            <stop offset="70%" stop-color="#8b6914"/>
+                            <stop offset="100%" stop-color="#5a3a1a"/>
+                        </linearGradient>
+                        <radialGradient id="headGrad" cx="50%" cy="40%" r="50%">
+                            <stop offset="0%" stop-color="#c89840"/>
+                            <stop offset="60%" stop-color="#8b6914"/>
+                            <stop offset="100%" stop-color="#5a3a1a"/>
+                        </radialGradient>
+                        <filter id="malletShadow">
+                            <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+                        </filter>
+                    </defs>
+
+                    <!-- 槌柄 -->
+                    <rect x="44" y="70" width="12" height="120" rx="4" fill="url(#handleGrad)" filter="url(#malletShadow)"/>
+
+                    <!-- 槌柄纹理 -->
+                    <line x1="46" y1="80" x2="54" y2="80" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="90" x2="54" y2="90" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="100" x2="54" y2="100" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="110" x2="54" y2="110" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="120" x2="54" y2="120" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="130" x2="54" y2="130" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="140" x2="54" y2="140" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="150" x2="54" y2="150" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="160" x2="54" y2="160" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+                    <line x1="46" y1="170" x2="54" y2="170" stroke="#4a2a0a" stroke-width="0.5" opacity="0.3"/>
+
+                    <!-- 槌头 -->
+                    <ellipse cx="50" cy="40" rx="30" ry="35" fill="url(#headGrad)" filter="url(#malletShadow)"/>
+
+                    <!-- 槌头高光 -->
+                    <ellipse cx="45" cy="30" rx="12" ry="15" fill="rgba(255,220,150,0.15)"/>
+
+                    <!-- 槌头底部平面（敲击面） -->
+                    <ellipse cx="50" cy="72" rx="22" ry="6" fill="#4a2a0a" opacity="0.6"/>
+
+                    <!-- 槌头装饰线 -->
+                    <ellipse cx="50" cy="40" rx="28" ry="32" fill="none" stroke="#a07830" stroke-width="0.8" opacity="0.2"/>
+                </svg>
+            </div>
+
+            <div class="muyu-wrapper" id="muyuWrapper">
+                <div class="muyu" id="muyu">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <radialGradient id="bodyGrad" cx="50%" cy="40%" r="50%">
+                                <stop offset="0%" stop-color="#d4a060"/>
+                                <stop offset="40%" stop-color="#b8863a"/>
+                                <stop offset="80%" stop-color="#8b6914"/>
+                                <stop offset="100%" stop-color="#6b4f10"/>
+                            </radialGradient>
+                            <radialGradient id="bodyGrad2" cx="50%" cy="60%" r="50%">
+                                <stop offset="0%" stop-color="#c89840"/>
+                                <stop offset="100%" stop-color="#7a5a18"/>
+                            </radialGradient>
+                            <radialGradient id="highlight" cx="40%" cy="35%" r="30%">
+                                <stop offset="0%" stop-color="rgba(255,220,150,0.4)"/>
+                                <stop offset="100%" stop-color="rgba(255,220,150,0)"/>
+                            </radialGradient>
+                            <filter id="shadow">
+                                <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.4)"/>
+                            </filter>
+                        </defs>
+
+                        <!-- 木鱼底座 -->
+                        <ellipse cx="100" cy="145" rx="75" ry="20" fill="#5a3e0e" opacity="0.6"/>
+
+                        <!-- 木鱼主体 -->
+                        <ellipse cx="100" cy="100" rx="80" ry="55" fill="url(#bodyGrad)" filter="url(#shadow)"/>
+
+                        <!-- 木鱼底部暗面 -->
+                        <ellipse cx="100" cy="120" rx="70" ry="30" fill="url(#bodyGrad2)" opacity="0.5"/>
+
+                        <!-- 木鱼高光 -->
+                        <ellipse cx="100" cy="100" rx="80" ry="55" fill="url(#highlight)"/>
+
+                        <!-- 木鱼顶部开口 - 鱼嘴 -->
+                        <ellipse cx="100" cy="78" rx="45" ry="12" fill="#3a2508"/>
+                        <ellipse cx="100" cy="76" rx="40" ry="8" fill="#1a0f02"/>
+
+                        <!-- 鱼眼 -->
+                        <circle cx="70" cy="95" r="8" fill="#3a2508"/>
+                        <circle cx="70" cy="94" r="5" fill="#1a0f02"/>
+                        <circle cx="68" cy="92" r="2" fill="rgba(255,255,255,0.3)"/>
+
+                        <circle cx="130" cy="95" r="8" fill="#3a2508"/>
+                        <circle cx="130" cy="94" r="5" fill="#1a0f02"/>
+                        <circle cx="128" cy="92" r="2" fill="rgba(255,255,255,0.3)"/>
+
+                        <!-- 鱼鳞纹理 -->
+                        <g opacity="0.15" stroke="#d4a060" stroke-width="0.8" fill="none">
+                            <path d="M60,110 Q80,100 100,110 Q120,100 140,110"/>
+                            <path d="M55,120 Q80,110 100,120 Q120,110 145,120"/>
+                            <path d="M65,100 Q80,92 100,100 Q120,92 135,100"/>
+                            <path d="M70,130 Q85,122 100,130 Q115,122 130,130"/>
+                        </g>
+
+                        <!-- 木鱼边缘装饰线 -->
+                        <ellipse cx="100" cy="100" rx="80" ry="55" fill="none" stroke="#a07830" stroke-width="1.5" opacity="0.3"/>
+                    </svg>
+                </div>
+
+                <div class="ripple-container" id="rippleContainer"></div>
+                <div class="combo-container" id="comboContainer"></div>
+            </div>
+        </div>
+
+        <!-- 控制栏 -->
+        <div class="controls">
+            <button class="btn" id="autoBtn">▶ 自动敲</button>
+            <button class="btn" id="resetBtn">重置</button>
+            <button class="lang-btn" id="langBtn">EN</button>
+        </div>
+
+        <!-- 法律链接 -->
+        <div class="legal-links">
+            <a href="https://qiaomuyu.sbs/#user" target="_blank" class="btn" id="linkUser">用户协议</a>
+            <a href="https://qiaomuyu.sbs/#copyright" target="_blank" class="btn" id="linkCopyright">版权说明</a>
+            <a href="https://qiaomuyu.sbs/#copyright" target="_blank" class="btn" id="linkPrivacy">隐私政策</a>
+        </div>
+
+        <div class="info" id="infoText">点击木鱼 · 空格键敲击 · 自动积累功德</div>
+    </div>
+
+    <script>
+        // ===== 音效 - 木鱼声 =====
+        class MuyuSound {
+            constructor() {
+                this.audioCtx = null;
+                this.init();
+            }
+
+            init() {
+                try {
+                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Web Audio API not supported');
+                }
+            }
+
+            play() {
+                if (!this.audioCtx) return;
+
+                try {
+                    if (this.audioCtx.state === 'suspended') {
+                        this.audioCtx.resume();
+                    }
+
+                    const now = this.audioCtx.currentTime;
+
+                    // 主音 - 木鱼的木质共鸣声
+                    const osc = this.audioCtx.createOscillator();
+                    const gain = this.audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+
+                    // 泛音 - 增加木质感
+                    const osc2 = this.audioCtx.createOscillator();
+                    const gain2 = this.audioCtx.createGain();
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(1200, now);
+                    osc2.frequency.exponentialRampToValueAtTime(600, now + 0.03);
+                    gain2.gain.setValueAtTime(0.2, now);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc2.connect(gain2);
+                    gain2.connect(this.audioCtx.destination);
+                    osc2.start(now);
+                    osc2.stop(now + 0.2);
+
+                    // 敲击冲击声 - 短促的噪声
+                    const bufferSize = this.audioCtx.sampleRate * 0.05;
+                    const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.1));
+                    }
+                    const noise = this.audioCtx.createBufferSource();
+                    const noiseGain = this.audioCtx.createGain();
+                    noise.buffer = buffer;
+                    noiseGain.gain.setValueAtTime(0.15, now);
+                    noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    noise.connect(noiseGain);
+                    noiseGain.connect(this.audioCtx.destination);
+                    noise.start(now);
+                } catch (e) {}
+            }
+        }
+
+        const sound = new MuyuSound();
+
+        // ===== 游戏状态 =====
+        let score = parseInt(localStorage.getItem('muyuScore')) || 0;
+        let combo = 0;
+        let lastHitTime = 0;
+        const COMBO_WINDOW = 1500;
+        let isAuto = false;
+        let autoTimer = null;
+        let autoSpeed = 600; // 毫秒
+
+        // DOM
+        const scoreEl = document.getElementById('score');
+        const muyuEl = document.getElementById('muyu');
+        const malletEl = document.getElementById('mallet');
+        const wrapper = document.getElementById('muyuWrapper');
+        const rippleContainer = document.getElementById('rippleContainer');
+        const comboContainer = document.getElementById('comboContainer');
+        const resetBtn = document.getElementById('resetBtn');
+        const autoBtn = document.getElementById('autoBtn');
+
+        // ===== 分数 =====
+        function updateScore() {
+            scoreEl.textContent = score;
+            localStorage.setItem('muyuScore', score);
+        }
+
+        // ===== 波纹 =====
+        function createRipple() {
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            rippleContainer.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        // ===== 飘浮文字 =====
+        function createFloatText() {
+            const text = document.createElement('div');
+            text.className = 'float-text';
+            text.textContent = '+1 功德';
+            wrapper.appendChild(text);
+            setTimeout(() => text.remove(), 1000);
+        }
+
+        // ===== 连击 =====
+        function showCombo(count) {
+            comboContainer.innerHTML = '';
+            const text = document.createElement('div');
+            text.className = 'combo-text';
+            if (count >= 50) {
+                text.textContent = `🔥🔥🔥 ${count}连击！功德无量！🔥🔥🔥`;
+                text.style.color = '#ff0000';
+                text.style.fontSize = '32px';
+            } else if (count >= 30) {
+                text.textContent = `🔥🔥 ${count}连击！善哉善哉！🔥🔥`;
+                text.style.color = '#ff4500';
+                text.style.fontSize = '28px';
+            } else if (count >= 20) {
+                text.textContent = `🔥 ${count}连击！功德深厚！🔥`;
+                text.style.color = '#ff6b35';
+            } else if (count >= 10) {
+                text.textContent = `✨ ${count}连击！✨`;
+                text.style.color = '#ffd700';
+            } else if (count >= 5) {
+                text.textContent = `${count}连击！`;
+                text.style.color = '#ffa500';
+            } else {
+                text.textContent = `${count}x`;
+                text.style.color = '#d4a574';
+            }
+            comboContainer.appendChild(text);
+            setTimeout(() => {
+                if (comboContainer.contains(text)) {
+                    text.style.opacity = '0';
+                    text.style.transition = 'opacity 0.3s';
+                    setTimeout(() => text.remove(), 300);
+                }
+            }, 800);
+        }
+
+        // ===== 🎆 炫酷特效系统 =====
+
+        // 特效列表 - 每个特效有名称、触发概率、触发条件
+        const effects = [
+            { name: 'screenShake', prob: 0.08, minCombo: 0, fn: triggerScreenShake },
+            { name: 'goldenBurst', prob: 0.06, minCombo: 0, fn: triggerGoldenBurst },
+            { name: 'particleExplosion', prob: 0.10, minCombo: 0, fn: triggerParticleExplosion },
+            { name: 'buddhaLight', prob: 0.04, minCombo: 5, fn: triggerBuddhaLight },
+            { name: 'firework', prob: 0.07, minCombo: 3, fn: triggerFirework },
+            { name: 'rainbowRing', prob: 0.06, minCombo: 0, fn: triggerRainbowRing },
+            { name: 'sutraRain', prob: 0.05, minCombo: 5, fn: triggerSutraRain },
+            { name: 'lotusBloom', prob: 0.05, minCombo: 3, fn: triggerLotusBloom },
+            { name: 'thunder', prob: 0.03, minCombo: 10, fn: triggerThunder },
+            { name: 'stars', prob: 0.08, minCombo: 0, fn: triggerStars },
+            { name: 'inkSplash', prob: 0.05, minCombo: 0, fn: triggerInkSplash },
+            { name: 'confetti', prob: 0.06, minCombo: 5, fn: triggerConfetti },
+            { name: 'haloPulse', prob: 0.07, minCombo: 0, fn: triggerHaloPulse },
+            { name: 'digitalRain', prob: 0.04, minCombo: 8, fn: triggerDigitalRain },
+            { name: 'hearts', prob: 0.06, minCombo: 0, fn: triggerHearts },
+        ];
+
+        // 尝试触发随机特效
+        function tryTriggerRandomEffect() {
+            // 根据连击数提高触发概率
+            const comboBonus = Math.min(combo / 20, 0.3);
+            
+            for (const effect of effects) {
+                if (combo >= effect.minCombo && Math.random() < effect.prob + comboBonus) {
+                    effect.fn();
+                    return; // 每次只触发一个特效
+                }
+            }
+        }
+
+        // 1. 屏幕震动
+        function triggerScreenShake() {
+            const container = document.querySelector('.container');
+            container.classList.remove('effect-screen-shake');
+            void container.offsetWidth;
+            container.classList.add('effect-screen-shake');
+            setTimeout(() => container.classList.remove('effect-screen-shake'), 500);
+        }
+
+        // 2. 金光爆闪
+        function triggerGoldenBurst() {
+            const el = document.createElement('div');
+            el.className = 'effect-golden-burst';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 700);
+        }
+
+        // 3. 粒子爆炸
+        function triggerParticleExplosion() {
+            const container = document.createElement('div');
+            container.className = 'effect-particle-container';
+            document.body.appendChild(container);
+
+            const colors = ['#ffd700', '#ff6b35', '#ff4500', '#ff0000', '#ffa500', '#ffff00', '#ff69b4', '#00ff88'];
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+
+            for (let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.className = 'effect-particle';
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 100 + Math.random() * 300;
+                p.style.cssText = `
+                    left: ${cx}px;
+                    top: ${cy}px;
+                    width: ${4 + Math.random() * 8}px;
+                    height: ${4 + Math.random() * 8}px;
+                    background: ${colors[Math.floor(Math.random() * colors.length)]};
+                    --tx: ${Math.cos(angle) * dist}px;
+                    --ty: ${Math.sin(angle) * dist}px;
+                    animation-duration: ${0.6 + Math.random() * 0.6}s;
+                    animation-delay: ${Math.random() * 0.2}s;
+                `;
+                container.appendChild(p);
+            }
+            setTimeout(() => container.remove(), 1500);
+        }
+
+        // 4. 佛光普照
+        function triggerBuddhaLight() {
+            const el = document.createElement('div');
+            el.className = 'effect-buddha-light';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+
+        // 5. 烟花特效
+        function triggerFirework() {
+            const container = document.createElement('div');
+            container.className = 'effect-firework';
+            document.body.appendChild(container);
+
+            const colors = ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#0088ff', '#8800ff', '#ff0088', '#ffd700'];
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+
+            for (let i = 0; i < 40; i++) {
+                const p = document.createElement('div');
+                p.className = 'effect-firework-particle';
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 50 + Math.random() * 200;
+                p.style.cssText = `
+                    left: ${cx}px;
+                    top: ${cy}px;
+                    width: ${3 + Math.random() * 6}px;
+                    height: ${3 + Math.random() * 6}px;
+                    background: ${colors[Math.floor(Math.random() * colors.length)]};
+                    box-shadow: 0 0 6px ${colors[Math.floor(Math.random() * colors.length)]};
+                    --fx: ${Math.cos(angle) * dist}px;
+                    --fy: ${Math.sin(angle) * dist}px;
+                    animation-duration: ${0.8 + Math.random() * 0.5}s;
+                    animation-delay: ${Math.random() * 0.15}s;
+                `;
+                container.appendChild(p);
+            }
+            setTimeout(() => container.remove(), 2000);
+        }
+
+        // 6. 彩虹光环
+        function triggerRainbowRing() {
+            const el = document.createElement('div');
+            el.className = 'effect-rainbow-ring';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1200);
+        }
+
+        // 7. 经文飘落
+        function triggerSutraRain() {
+            const container = document.createElement('div');
+            container.className = 'effect-sutra-container';
+            document.body.appendChild(container);
+
+            const chars = ['唵', '嘛', '呢', '叭', '咪', '吽', '佛', '法', '僧', '禅', '悟', '空', '慧', '戒', '定', '缘', '心', '性', '如', '来', '菩', '萨', '摩', '诃', '般', '若', '波', '罗', '蜜', '多', '吉', '祥', '如', '意', '福', '寿', '康', '宁'];
+            
+            for (let i = 0; i < 15; i++) {
+                const c = document.createElement('div');
+                c.className = 'effect-sutra-char';
+                c.textContent = chars[Math.floor(Math.random() * chars.length)];
+                c.style.cssText = `
+                    left: ${Math.random() * 90 + 5}%;
+                    top: ${Math.random() * 30}%;
+                    font-size: ${18 + Math.random() * 20}px;
+                    animation-duration: ${1.5 + Math.random() * 1.5}s;
+                    animation-delay: ${Math.random() * 0.5}s;
+                    opacity: ${0.3 + Math.random() * 0.5};
+                `;
+                container.appendChild(c);
+            }
+            setTimeout(() => container.remove(), 3000);
+        }
+
+        // 8. 莲花绽放
+        function triggerLotusBloom() {
+            const el = document.createElement('div');
+            el.className = 'effect-lotus';
+            el.textContent = '🪷';
+            el.style.cssText = `
+                left: ${window.innerWidth / 2 - 30}px;
+                top: ${window.innerHeight / 2 - 30}px;
+                animation-duration: ${1 + Math.random() * 0.5}s;
+            `;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        // 9. 雷电特效
+        function triggerThunder() {
+            const el = document.createElement('div');
+            el.className = 'effect-thunder';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 400);
+        }
+
+        // 10. 星星旋转
+        function triggerStars() {
+            const container = document.createElement('div');
+            container.className = 'effect-stars-container';
+            document.body.appendChild(container);
+
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+
+            for (let i = 0; i < 12; i++) {
+                const s = document.createElement('div');
+                s.className = 'effect-star';
+                const angle = (i / 12) * Math.PI * 2;
+                const dist1 = 50 + Math.random() * 80;
+                const dist2 = 150 + Math.random() * 100;
+                s.textContent = '✦';
+                s.style.cssText = `
+                    left: ${cx}px;
+                    top: ${cy}px;
+                    --sx: ${Math.cos(angle) * dist1}px;
+                    --sy: ${Math.sin(angle) * dist1}px;
+                    --sx2: ${Math.cos(angle + 0.5) * dist2}px;
+                    --sy2: ${Math.sin(angle + 0.5) * dist2}px;
+                    animation-duration: ${0.8 + Math.random() * 0.6}s;
+                    animation-delay: ${Math.random() * 0.2}s;
+                    font-size: ${20 + Math.random() * 20}px;
+                `;
+                container.appendChild(s);
+            }
+            setTimeout(() => container.remove(), 2000);
+        }
+
+        // 11. 水墨扩散
+        function triggerInkSplash() {
+            const el = document.createElement('div');
+            el.className = 'effect-ink';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1200);
+        }
+
+        // 12. 彩色纸屑
+        function triggerConfetti() {
+            const container = document.createElement('div');
+            container.className = 'effect-confetti-container';
+            document.body.appendChild(container);
+
+            const colors = ['#ff0000', '#ff8800', '#ffff00', '#00ff00', '#0088ff', '#8800ff', '#ff0088', '#ffd700', '#ff69b4', '#00ff88'];
+
+            for (let i = 0; i < 50; i++) {
+                const c = document.createElement('div');
+                c.className = 'effect-confetti';
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                c.style.cssText = `
+                    left: ${Math.random() * 100}%;
+                    top: ${Math.random() * 30}%;
+                    width: ${5 + Math.random() * 10}px;
+                    height: ${5 + Math.random() * 10}px;
+                    background: ${color};
+                    border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+                    animation-duration: ${1 + Math.random() * 1}s;
+                    animation-delay: ${Math.random() * 0.5}s;
+                `;
+                container.appendChild(c);
+            }
+            setTimeout(() => container.remove(), 2500);
+        }
+
+        // 13. 光环脉冲
+        function triggerHaloPulse() {
+            const el = document.createElement('div');
+            el.className = 'effect-halo-pulse';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        // 14. 数字雨
+        function triggerDigitalRain() {
+            const container = document.createElement('div');
+            container.className = 'effect-digital-rain-container';
+            document.body.appendChild(container);
+
+            const chars = '0123456789功德圆满善哉阿弥陀佛';
+
+            for (let i = 0; i < 20; i++) {
+                const c = document.createElement('div');
+                c.className = 'effect-digital-char';
+                c.textContent = chars[Math.floor(Math.random() * chars.length)];
+                c.style.cssText = `
+                    left: ${Math.random() * 95 + 2.5}%;
+                    top: ${Math.random() * 30}%;
+                    animation-duration: ${0.8 + Math.random() * 0.8}s;
+                    animation-delay: ${Math.random() * 0.3}s;
+                    color: ${['#00ff88', '#00ffcc', '#88ff00', '#00ddff'][Math.floor(Math.random() * 4)]};
+                `;
+                container.appendChild(c);
+            }
+            setTimeout(() => container.remove(), 2000);
+        }
+
+        // 15. 爱心飘浮
+        function triggerHearts() {
+            const container = document.createElement('div');
+            container.className = 'effect-hearts-container';
+            document.body.appendChild(container);
+
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+
+            for (let i = 0; i < 10; i++) {
+                const h = document.createElement('div');
+                h.className = 'effect-heart';
+                h.textContent = ['❤️', '💛', '💚', '💙', '💜', '🧡', '💖', '💗'][Math.floor(Math.random() * 8)];
+                h.style.cssText = `
+                    left: ${cx + (Math.random() - 0.5) * 200}px;
+                    top: ${cy + (Math.random() - 0.5) * 100}px;
+                    animation-duration: ${1 + Math.random() * 0.8}s;
+                    animation-delay: ${Math.random() * 0.3}s;
+                    font-size: ${20 + Math.random() * 25}px;
+                `;
+                container.appendChild(h);
+            }
+            setTimeout(() => container.remove(), 2500);
+        }
+
+        // ===== 核心：敲击木鱼 =====
+        function hitMuyu(e) {
+            if (e) e.preventDefault();
+
+            const now = Date.now();
+
+            // 连击检测
+            if (now - lastHitTime < COMBO_WINDOW) {
+                combo++;
+            } else {
+                combo = 1;
+            }
+            lastHitTime = now;
+
+            // 功德增加（连击加成）
+            const bonus = Math.min(Math.floor(combo / 10), 5);
+            const addScore = 1 + bonus;
+            score += addScore;
+            updateScore();
+
+            // 音效 - 木鱼声
+            sound.play();
+
+            // 木鱼震动动画
+            muyuEl.classList.remove('hit');
+            void muyuEl.offsetWidth;
+            muyuEl.classList.add('hit');
+
+            // 木鱼槌敲击动画（仅在手动时触发，自动时由CSS循环动画控制）
+            if (!isAuto) {
+                malletEl.classList.remove('hit');
+                void malletEl.offsetWidth;
+                malletEl.classList.add('hit');
+            }
+
+            // 波纹
+            createRipple();
+
+            // 飘浮文字
+            createFloatText();
+
+            // 连击
+            if (combo >= 3) {
+                showCombo(combo);
+            }
+
+            // 分数弹跳
+            scoreEl.classList.remove('pop');
+            void scoreEl.offsetWidth;
+            scoreEl.classList.add('pop');
+
+            // 🎆 随机触发炫酷特效
+            tryTriggerRandomEffect();
+
+            // 震动反馈
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+        }
+
+        // ===== 自动敲击 =====
+        function startAuto() {
+            if (autoTimer) return;
+            isAuto = true;
+            autoBtn.textContent = '⏸ 暂停';
+            autoBtn.classList.add('active');
+
+            // 木鱼槌进入循环动画模式
+            malletEl.classList.add('auto');
+
+            // 立即敲一下
+            hitMuyu();
+
+            // 定时敲击
+            autoTimer = setInterval(() => {
+                hitMuyu();
+            }, autoSpeed);
+        }
+
+        function stopAuto() {
+            if (autoTimer) {
+                clearInterval(autoTimer);
+                autoTimer = null;
+            }
+            isAuto = false;
+            autoBtn.textContent = '▶ 自动敲';
+            autoBtn.classList.remove('active');
+
+            // 移除木鱼槌循环动画
+            malletEl.classList.remove('auto');
+        }
+
+        function toggleAuto() {
+            if (isAuto) {
+                stopAuto();
+            } else {
+                startAuto();
+            }
+        }
+
+        // ===== 重置 =====
+        function resetScore() {
+            if (confirm('确定要重置所有功德吗？')) {
+                if (isAuto) stopAuto();
+                score = 0;
+                combo = 0;
+                lastHitTime = 0;
+                updateScore();
+                comboContainer.innerHTML = '';
+                scoreEl.classList.remove('pop');
+                muyuEl.classList.remove('hit');
+                malletEl.classList.remove('hit');
+                malletEl.classList.remove('auto');
+            }
+        }
+
+        // ===== 中英文切换 =====
+        let currentLang = localStorage.getItem('muyuLang') || 'zh';
+
+        const langData = {
+            zh: {
+                title: ['敲', '木', '鱼'],
+                scoreLabel: '功德',
+                autoBtn: '▶ 自动敲',
+                autoBtnActive: '⏸ 暂停',
+                resetBtn: '重置',
+                langBtn: 'EN',
+                info: '点击木鱼 · 空格键敲击 · 自动积累功德',
+                floatText: '+1 功德',
+                combo5: '{count}连击！',
+                combo10: '✨ {count}连击！✨',
+                combo20: '🔥 {count}连击！功德深厚！🔥',
+                combo30: '🔥🔥 {count}连击！善哉善哉！🔥🔥',
+                combo50: '🔥🔥🔥 {count}连击！功德无量！🔥🔥🔥',
+                confirmReset: '确定要重置所有功德吗？',
+                linkUser: '用户协议',
+                linkCopyright: '版权说明',
+                linkPrivacy: '隐私政策',
+                console1: '🪷 敲木鱼 - 功德积累 🪷',
+                console2: '🎆 已加载 15 种炫酷特效，每次敲击随机触发！',
+                console3: '按 空格键 手动敲击，点击"自动敲"自动积累功德！'
+            },
+            en: {
+                title: ['M', 'u', 'Y', 'u'],
+                scoreLabel: 'Merit',
+                autoBtn: '▶ Auto',
+                autoBtnActive: '⏸ Pause',
+                resetBtn: 'Reset',
+                langBtn: '中',
+                info: 'Tap the fish · Press Space · Auto mode',
+                floatText: '+1 Merit',
+                combo5: '{count}x Combo!',
+                combo10: '✨ {count}x Combo!✨',
+                combo20: '🔥 {count}x Combo!🔥',
+                combo30: '🔥🔥 {count}x Combo!🔥🔥',
+                combo50: '🔥🔥🔥 {count}x Combo! AMAZING!🔥🔥🔥',
+                confirmReset: 'Reset all merits?',
+                linkUser: 'Terms',
+                linkCopyright: 'Copyright',
+                linkPrivacy: 'Privacy',
+                console1: '🪷 MuYu - Merit Accumulation 🪷',
+                console2: '🎆 15 cool effects loaded!',
+                console3: 'Press Space to hit, click Auto for auto mode!'
+            }
+        };
+
+        function applyLang(lang) {
+            currentLang = lang;
+            localStorage.setItem('muyuLang', lang);
+
+            const data = langData[lang];
+
+            // 标题
+            const titleSpans = document.querySelectorAll('.title span');
+            data.title.forEach((char, i) => {
+                if (titleSpans[i]) titleSpans[i].textContent = char;
+            });
+
+            // 功德标签
+            document.querySelector('.score-label').textContent = data.scoreLabel;
+
+            // 按钮
+            if (!isAuto) autoBtn.textContent = data.autoBtn;
+            else autoBtn.textContent = data.autoBtnActive;
+            resetBtn.textContent = data.resetBtn;
+            langBtn.textContent = data.langBtn;
+
+            // 底部信息
+            document.getElementById('infoText').textContent = data.info;
+
+            // 法律链接
+            document.getElementById('linkUser').textContent = data.linkUser;
+            document.getElementById('linkCopyright').textContent = data.linkCopyright;
+            document.getElementById('linkPrivacy').textContent = data.linkPrivacy;
+
+            // 更新页面标题
+            document.title = lang === 'zh' ? '敲木鱼 - 功德积累' : 'MuYu - Merit Accumulation';
+            document.querySelector('meta[name="apple-mobile-web-app-title"]').content = lang === 'zh' ? '敲木鱼' : 'MuYu';
+
+            // 控制台
+            console.log(data.console1);
+            console.log(data.console2);
+            console.log(data.console3);
+        }
+
+        function toggleLang() {
+            const newLang = currentLang === 'zh' ? 'en' : 'zh';
+            applyLang(newLang);
+        }
+
+        const langBtn = document.getElementById('langBtn');
+        langBtn.addEventListener('click', toggleLang);
+
+        // 重写 createFloatText 以支持多语言
+        const _origCreateFloatText = createFloatText;
+        createFloatText = function() {
+            const text = document.createElement('div');
+            text.className = 'float-text';
+            text.textContent = langData[currentLang].floatText;
+            wrapper.appendChild(text);
+            setTimeout(() => text.remove(), 1000);
+        };
+
+        // 重写 showCombo 以支持多语言
+        const _origShowCombo = showCombo;
+        showCombo = function(count) {
+            comboContainer.innerHTML = '';
+            const text = document.createElement('div');
+            text.className = 'combo-text';
+            const data = langData[currentLang];
+            if (count >= 50) {
+                text.textContent = data.combo50.replace('{count}', count);
+                text.style.color = '#ff0000';
+                text.style.fontSize = '32px';
+            } else if (count >= 30) {
+                text.textContent = data.combo30.replace('{count}', count);
+                text.style.color = '#ff4500';
+                text.style.fontSize = '28px';
+            } else if (count >= 20) {
+                text.textContent = data.combo20.replace('{count}', count);
+                text.style.color = '#ff6b35';
+            } else if (count >= 10) {
+                text.textContent = data.combo10.replace('{count}', count);
+                text.style.color = '#ffd700';
+            } else if (count >= 5) {
+                text.textContent = data.combo5.replace('{count}', count);
+                text.style.color = '#ffa500';
+            } else {
+                text.textContent = `${count}x`;
+                text.style.color = '#d4a574';
+            }
+            comboContainer.appendChild(text);
+            setTimeout(() => {
+                if (comboContainer.contains(text)) {
+                    text.style.opacity = '0';
+                    text.style.transition = 'opacity 0.3s';
+                    setTimeout(() => text.remove(), 300);
+                }
+            }, 800);
+        };
+
+        // 重写 resetScore 以支持多语言
+        const _origResetScore = resetScore;
+        resetScore = function() {
+            if (confirm(langData[currentLang].confirmReset)) {
+                if (isAuto) stopAuto();
+                score = 0;
+                combo = 0;
+                lastHitTime = 0;
+                updateScore();
+                comboContainer.innerHTML = '';
+                scoreEl.classList.remove('pop');
+                muyuEl.classList.remove('hit');
+                malletEl.classList.remove('hit');
+                malletEl.classList.remove('auto');
+            }
+        };
+
+        // ===== 事件绑定 =====
+        wrapper.addEventListener('click', (e) => {
+            if (isAuto) stopAuto();
+            hitMuyu(e);
+        });
+
+        wrapper.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                if (isAuto) stopAuto();
+                hitMuyu(e);
+            }
+        }, { passive: false });
+
+        resetBtn.addEventListener('click', resetScore);
+        autoBtn.addEventListener('click', toggleAuto);
+
+        // 空格键
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                if (isAuto) stopAuto();
+                hitMuyu(e);
+            }
+        });
+
+        // ===== 初始化 =====
+        updateScore();
+        applyLang(currentLang);
+
+        // 背景粒子
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.width = (Math.random() * 4 + 2) + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.animationDuration = (Math.random() * 10 + 8) + 's';
+                particle.style.animationDelay = (Math.random() * 10) + 's';
+                particle.style.opacity = Math.random() * 0.3 + 0.1;
+                container.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        console.log('🪷 敲木鱼 - 功德积累 🪷');
+        console.log('🎆 已加载 15 种炫酷特效，每次敲击随机触发！');
+        console.log('按 空格键 手动敲击，点击"自动敲"自动积累功德！');
+    </script>
+</body>
+</html>
